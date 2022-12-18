@@ -162,7 +162,9 @@ void DrawScreen(
         bClear = false;
     }
     TextOut(hdc, 5, 5,
-        sSequence.c_str(), sSequence.length());
+        sSequence.c_str(), (int)sSequence.length());
+    // Here is an example of how to play a sound. We should do this whenever the string input changed and makes sense to play, and on every keystroke.
+    // PlaySound(L"C:\\Users\\ebydj\\OneDrive\\Documents\\Sound Recordings\\alphabet.wav", NULL, SND_FILENAME | SND_ASYNC);
 
     EndPaint(hWnd, &ps);
 }
@@ -178,7 +180,7 @@ void RegisterCharacter(
     } else if (wCode == 8 /* backspace */) {
         sSequence.pop_back();
         bClear = true;
-    } else if (isprint(wCode)) {
+    } else if (isprint((int)wCode)) {
         sSequence = sSequence + (TCHAR)wCode;
     }
     RedrawWindow(hWnd, NULL, NULL, RDW_INVALIDATE);
