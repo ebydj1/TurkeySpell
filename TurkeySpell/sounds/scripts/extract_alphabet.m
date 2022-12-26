@@ -16,6 +16,10 @@ soundBank = struct('letter',char(),'sound',cell(26,1));
 for idx = 1:26
     soundBank(idx).letter = 'a'+idx-1;
     soundBank(idx).sound = y((1+2*idx)*Fs+1:(3+2*idx)*Fs);
+    rmsAvg = rms(soundBank(idx).sound(round(end/2):end));
+    startIdx = max(1,find(abs(soundBank(idx).sound) > 5*rmsAvg,1,'first')-round(0.02*Fs));
+    endIdx = min(find(abs(soundBank(idx).sound) > 5*rmsAvg,1,'last')+round(0.02*Fs),length(soundBank(idx).sound));
+    soundBank(idx).sound = soundBank(idx).sound(startIdx:endIdx);
 end
 
 % 4. Save each sound to a file.
