@@ -12,15 +12,17 @@
 
 // Global variables
 // ├ Window configuration
-//   ├ Window name: szWindowClass
-//   ├ Window title: szTitle
-//   └ Instance handle: hInst
+// | ├ Window name: szWindowClass
+// | ├ Window title: szTitle
+// | └ Instance handle: hInst
 // └ Program state
+//   ├ Sounds directory: dirSounds
 //   ├ Last string pressed: sSequence
 //   ├ Dictionary of valid words: dWords
 //   └ Background needs to be redrawn: bClear
 
 // Data types
+// ├ tstring: A std::string or a std::wstring depending on UNICODE setting.
 // └ TurkeyData: Contains an image and a sound per key.
 
 #include <Windows.h>
@@ -42,18 +44,23 @@ void DrawScreen(_In_ HWND hWnd);
 class TurkeyData {
     // Eventually this will have an image and a sound per key.
 };
+#ifdef UNICODE
+typedef std::wstring tstring;
+#else
+typedef std::string tstring;
+#endif
 
 // Global variables
 static const TCHAR szWindowClass[] = _T("TurkeySpell");
 static const TCHAR szTitle[] = _T("TurkeySpell, by Dad");
 HINSTANCE hInst;
-#ifdef UNICODE
-std::wstring sSequence;
-#else
-std::string sSequence;
-#endif
+tstring dirSounds;
+tstring sSequence;
 std::map<std::string, TurkeyData> dWords;
 bool bClear;
+
+// Constants
+const TCHAR SOUNDS_SUFFIX[] = _T("\\sounds");
 
 int WINAPI WinMain(
     _In_        HINSTANCE   hInstance,
@@ -117,8 +124,21 @@ int WINAPI WinMain(
 }
 
 void InitDictionary() {
+    TCHAR* soundsdir = {};
+    SIZE_T currdirlen, soundsdirlen;
+
+    currdirlen = GetCurrentDirectory(0, 0);
+    soundsdirlen = currdirlen + _tcslen(SOUNDS_SUFFIX);
+    soundsdir = (LPTSTR)malloc(soundsdirlen * sizeof(TCHAR));
+    GetCurrentDirectory(currdirlen, soundsdir);
+    _tcscpy_s(soundsdir + currdirlen - 1,
+        _tcslen(SOUNDS_SUFFIX) + 1,
+        SOUNDS_SUFFIX);
+    dirSounds = soundsdir;
+    free(soundsdir);
+
     MessageBox(NULL,
-        _T("I promise I'll initialize the dictionary someday"),
+        dirSounds.c_str(),
         _T("Stubby McStub"),
         NULL);
 }
