@@ -31,6 +31,7 @@
 #include <tchar.h>
 
 #include <string>
+#include <regex>
 #include <map>
 
 // Forward declarations of functions
@@ -41,14 +42,30 @@ void RegisterCharacter(_In_ HWND hWnd, _In_ WPARAM wCode, _In_ LPARAM lFlags);
 void DrawScreen(_In_ HWND hWnd);
 
 // Data types
-class TurkeyData {
-    // Eventually this will have an image and a sound per key.
-};
 #ifdef UNICODE
 typedef std::wstring tstring;
+typedef std::wregex tregex;
 #else
 typedef std::string tstring;
+typedef std::regex tregex;
 #endif
+class TurkeyData {
+private:
+    tstring pathToSound;
+    tstring pathToPicture;
+public:
+    TurkeyData(tstring _pathToSound = _T(""),
+        tstring _pathToPicture = _T(""))
+        : pathToSound(_pathToSound),
+        pathToPicture(_pathToPicture) {}
+    const tstring& getPathToSound() {
+        return pathToSound;
+    }
+    const tstring& getPathToPicture() {
+        return pathToPicture;
+    }
+};
+typedef std::map<tstring, TurkeyData> turkeyMap;
 
 // Global variables
 static const TCHAR szWindowClass[] = _T("TurkeySpell");
@@ -56,7 +73,7 @@ static const TCHAR szTitle[] = _T("TurkeySpell, by Dad");
 HINSTANCE hInst;
 tstring dirSounds;
 tstring sSequence;
-std::map<std::string, TurkeyData> dWords;
+turkeyMap dWords;
 bool bClear;
 
 // Constants
@@ -124,23 +141,31 @@ int WINAPI WinMain(
 }
 
 void InitDictionary() {
-    TCHAR* soundsdir = {};
-    SIZE_T currdirlen, soundsdirlen;
+    TCHAR* currdir;
+    DWORD currdirlen;
 
+    // Set up dirSounds, which stores the path to the sounds directory.
     currdirlen = GetCurrentDirectory(0, 0);
-    soundsdirlen = currdirlen + _tcslen(SOUNDS_SUFFIX);
-    soundsdir = (LPTSTR)malloc(soundsdirlen * sizeof(TCHAR));
-    GetCurrentDirectory(currdirlen, soundsdir);
-    _tcscpy_s(soundsdir + currdirlen - 1,
-        _tcslen(SOUNDS_SUFFIX) + 1,
-        SOUNDS_SUFFIX);
-    dirSounds = soundsdir;
-    free(soundsdir);
+    currdir = (LPTSTR)malloc(currdirlen * sizeof(TCHAR));
+    GetCurrentDirectory(currdirlen, currdir);
+    if (currdir != 0) {
+        dirSounds += currdir;
+    }
+    dirSounds += SOUNDS_SUFFIX;
+    free(currdir);
 
-    MessageBox(NULL,
-        dirSounds.c_str(),
-        _T("Stubby McStub"),
-        NULL);
+    // Find first wav file in directory.
+    tstring fileSearchString;
+    WIN32_FIND_DATA fileData;
+    HANDLE hFindFile;
+    fileSearchString = dirSounds + _T("\\*.wav");
+    hFindFile = FindFirstFile(fileSearchString.c_str(), &fileData);
+
+    do {
+        tstring filePrefix;
+        filePrefix = std::regex_replace(tstring(fileData.cFileName), tregex(_T(".wav")), _T(""));
+        dWords.insert(std::pair(filePrefix, TurkeyData(dirSounds + _T("\\") + fileData.cFileName)));
+    } while (FindNextFile(hFindFile, &fileData));
 }
 
 LRESULT CALLBACK WndProc(
@@ -183,8 +208,14 @@ void DrawScreen(
     }
     TextOut(hdc, 5, 5,
         sSequence.c_str(), (int)sSequence.length());
-    // Here is an example of how to play a sound. We should do this whenever the string input changed and makes sense to play, and on every keystroke.
-    // PlaySound(L"C:\\Users\\ebydj\\OneDrive\\Documents\\Sound Recordings\\alphabet.wav", NULL, SND_FILENAME | SND_ASYNC);
+    
+    turkeyMap::iterator it;
+    if (!sSequence.empty()
+        &&
+            (it = dWords.find(tstring(sSequence.substr(sSequence.length()-1,sSequence.length()))))
+            != dWords.end()) {
+        PlaySound(it->second.getPathToSound().c_str(), NULL, SND_FILENAME | SND_SYNC);
+    }
 
     EndPaint(hWnd, &ps);
 }
@@ -200,8 +231,8 @@ void RegisterCharacter(
     } else if (wCode == 8 /* backspace */) {
         sSequence.pop_back();
         bClear = true;
-    } else if (isprint((int)wCode)) {
-        sSequence = sSequence + (TCHAR)wCode;
+    } else if (isalpha((int)wCode)) {
+        sSequence = sSequence + (TCHAR)tolower((int)wCode);
     }
     RedrawWindow(hWnd, NULL, NULL, RDW_INVALIDATE);
 }
