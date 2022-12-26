@@ -14,7 +14,8 @@
 // ├ Window configuration
 // | ├ Window name: szWindowClass
 // | ├ Window title: szTitle
-// | └ Instance handle: hInst
+// | ├ Instance handle: hInst
+// | └ Red brush: hbRed 
 // └ Program state
 //   ├ Sounds directory: dirSounds
 //   ├ Last string pressed: sSequence
@@ -70,7 +71,10 @@ typedef std::map<tstring, TurkeyData> turkeyMap;
 // Global variables
 static const TCHAR szWindowClass[] = _T("TurkeySpell");
 static const TCHAR szTitle[] = _T("TurkeySpell, by Dad");
+static const COLORREF redColor = RGB(255, 127, 127);
 HINSTANCE hInst;
+HBRUSH hbRed;
+HFONT hfBigLetter;
 tstring dirSounds;
 tstring sSequence;
 turkeyMap dWords;
@@ -125,6 +129,18 @@ int WINAPI WinMain(
             NULL);
         return 1;
     }
+
+    hbRed = CreateSolidBrush(redColor);
+    hfBigLetter = CreateFont(36, 0,
+        0, 0,
+        FW_NORMAL,
+        FALSE, FALSE, FALSE,
+        DEFAULT_CHARSET,
+        OUT_DEFAULT_PRECIS,
+        CLIP_DEFAULT_PRECIS,
+        DEFAULT_QUALITY,
+        FF_DONTCARE,
+        NULL);
 
     InitDictionary();
 
@@ -197,26 +213,38 @@ void DrawScreen(
 ) {
     PAINTSTRUCT ps;
     HDC hdc;
+    RECT lpRect;
+    HFONT sysDefaultFont;
 
-    hdc = BeginPaint(hWnd, &ps);
+    hdc = BeginPaint(hWnd, &ps);    
+    GetClientRect(hWnd, &lpRect);
+    sysDefaultFont = (HFONT)SelectObject(hdc, (HGDIOBJ)hfBigLetter);
 
     if (bClear) {
-        RECT lpRect;
-        GetClientRect(hWnd, &lpRect);
-        FillRect(hdc, &lpRect, (HBRUSH)(COLOR_WINDOW+1));
         bClear = false;
+
+        if (!sSequence.empty()) {
+            turkeyMap::iterator it =
+                dWords.find(tstring(sSequence.substr(sSequence.length() - 1, sSequence.length())));
+            if (!sSequence.empty() && it != dWords.end()) {
+                FillRect(hdc, &lpRect, hbRed);
+                SetBkColor(hdc, redColor);
+                SetTextColor(hdc, RGB(0, 0, 0));
+                TextOut(hdc, 5, 5,
+                    sSequence.c_str(), (int)sSequence.length());
+                EndPaint(hWnd, &ps);
+                PlaySound(it->second.getPathToSound().c_str(), NULL, SND_FILENAME | SND_SYNC);
+                RedrawWindow(hWnd, NULL, NULL, RDW_INVALIDATE);
+                return;
+            }
+        }
     }
+    FillRect(hdc, &lpRect, (HBRUSH)(COLOR_WINDOW + 1));
+    SetBkColor(hdc, GetSysColor(COLOR_WINDOW));
     TextOut(hdc, 5, 5,
         sSequence.c_str(), (int)sSequence.length());
-    
-    turkeyMap::iterator it;
-    if (!sSequence.empty()
-        &&
-            (it = dWords.find(tstring(sSequence.substr(sSequence.length()-1,sSequence.length()))))
-            != dWords.end()) {
-        PlaySound(it->second.getPathToSound().c_str(), NULL, SND_FILENAME | SND_SYNC);
-    }
 
+    SelectObject(hdc, (HGDIOBJ)sysDefaultFont);
     EndPaint(hWnd, &ps);
 }
 
@@ -233,6 +261,7 @@ void RegisterCharacter(
         bClear = true;
     } else if (isalpha((int)wCode)) {
         sSequence = sSequence + (TCHAR)tolower((int)wCode);
+        bClear = true;
     }
     RedrawWindow(hWnd, NULL, NULL, RDW_INVALIDATE);
 }
