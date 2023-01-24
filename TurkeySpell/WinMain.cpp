@@ -257,7 +257,7 @@ void RegisterCharacter(
         sSequence = {};
         bClear = true;
     } else if (wCode == 8 /* backspace */) {
-        sSequence.pop_back();
+        if (!sSequence.empty()) sSequence.pop_back();
         bClear = true;
     } else if (isalpha((int)wCode)) {
         sSequence = sSequence + (TCHAR)tolower((int)wCode);
