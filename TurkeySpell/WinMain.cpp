@@ -20,7 +20,8 @@
 //   ├ Sounds directory: dirSounds
 //   ├ Last string pressed: sSequence
 //   ├ Dictionary of valid words: dWords
-//   └ Background needs to be redrawn: bClear
+//   ├ Background needs to be redrawn: bClear
+//   └ Backspace was pressed: bBack
 
 // Data types
 // ├ tstring: A std::string or a std::wstring depending on UNICODE setting.
@@ -79,6 +80,7 @@ tstring dirSounds;
 tstring sSequence;
 turkeyMap dWords;
 bool bClear;
+bool bBack;
 
 // Constants
 const TCHAR SOUNDS_SUFFIX[] = _T("\\sounds");
@@ -143,6 +145,9 @@ int WINAPI WinMain(
         NULL);
 
     InitDictionary();
+
+    bClear = false;
+    bBack = false;
 
     ShowWindow(hWnd, nCmdShow);
     UpdateWindow(hWnd);
@@ -233,8 +238,11 @@ void DrawScreen(
                 TextOut(hdc, 5, 5,
                     sSequence.c_str(), (int)sSequence.length());
                 EndPaint(hWnd, &ps);
-                PlaySound(it->second.getPathToSound().c_str(), NULL, SND_FILENAME | SND_SYNC);
+                if (!bBack) {
+                    PlaySound(it->second.getPathToSound().c_str(), NULL, SND_FILENAME | SND_SYNC);
+                }
                 RedrawWindow(hWnd, NULL, NULL, RDW_INVALIDATE);
+                bBack = false;
                 return;
             }
         }
@@ -253,15 +261,18 @@ void RegisterCharacter(
     _In_ WPARAM wCode,
     _In_ LPARAM lFlags
 ) {
-    if ((UINT)wCode == 13 /* newline */) {
-        sSequence = {};
-        bClear = true;
-    } else if (wCode == 8 /* backspace */) {
-        if (!sSequence.empty()) sSequence.pop_back();
-        bClear = true;
-    } else if (isalpha((int)wCode)) {
-        sSequence = sSequence + (TCHAR)tolower((int)wCode);
-        bClear = true;
+    if (!(lFlags & (1 << 30)) && !(lFlags & (1 << 31))) {
+        if ((UINT)wCode == 13 /* newline */) {
+            sSequence = {};
+            bClear = true;
+        } else if (wCode == 8 /* backspace */) {
+            if (!sSequence.empty()) sSequence.pop_back();
+            bClear = true;
+            bBack = true;
+        } else if (isalpha((int)wCode)) {
+            sSequence = sSequence + (TCHAR)tolower((int)wCode);
+            bClear = true;
+        }
+        RedrawWindow(hWnd, NULL, NULL, RDW_INVALIDATE);
     }
-    RedrawWindow(hWnd, NULL, NULL, RDW_INVALIDATE);
 }
