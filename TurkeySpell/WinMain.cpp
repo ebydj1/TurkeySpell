@@ -7,7 +7,7 @@
 // WinMain: Top-level entry function. Set up the window. Clean up on program exit.
 // ├ InitDictionary: Read the program data files and load them into memory.
 // └ WndProc: Top-level window function. Handle custom events in subfunctions.
-//   ├ CatchCharacter: Respond to pressed character.
+//   ├ RegisterCharacter: Respond to pressed character.
 //   └ UpdateWindow: Respond to paint request.
 
 // Global variables
@@ -225,35 +225,32 @@ void DrawScreen(
     GetClientRect(hWnd, &lpRect);
     sysDefaultFont = (HFONT)SelectObject(hdc, (HGDIOBJ)hfBigLetter);
 
-    if (bClear) {
-        bClear = false;
-
-        if (!sSequence.empty()) {
-            turkeyMap::iterator it =
-                dWords.find(tstring(sSequence.substr(sSequence.length() - 1, sSequence.length())));
-            if (!sSequence.empty() && it != dWords.end()) {
-                FillRect(hdc, &lpRect, hbRed);
-                SetBkColor(hdc, redColor);
-                SetTextColor(hdc, RGB(0, 0, 0));
-                TextOut(hdc, 5, 5,
-                    sSequence.c_str(), (int)sSequence.length());
-                EndPaint(hWnd, &ps);
-                if (!bBack) {
-                    PlaySound(it->second.getPathToSound().c_str(), NULL, SND_FILENAME | SND_SYNC);
-                }
-                RedrawWindow(hWnd, NULL, NULL, RDW_INVALIDATE);
-                bBack = false;
-                return;
+    if (bClear && !sSequence.empty()) {
+        turkeyMap::iterator it =
+            dWords.find(tstring(sSequence.substr(sSequence.length() - 1, sSequence.length())));
+        if (!sSequence.empty() && it != dWords.end()) {
+            FillRect(hdc, &lpRect, hbRed);
+            SetBkColor(hdc, redColor);
+            SetTextColor(hdc, RGB(0, 0, 0));
+            TextOut(hdc, 5, 5,
+                sSequence.c_str(), (int)sSequence.length());
+            EndPaint(hWnd, &ps);
+            if (!bBack) {
+                PlaySound(it->second.getPathToSound().c_str(), NULL, SND_FILENAME | SND_SYNC);
             }
+            RedrawWindow(hWnd, NULL, NULL, RDW_INVALIDATE);
         }
-    }
-    FillRect(hdc, &lpRect, (HBRUSH)(COLOR_WINDOW + 1));
-    SetBkColor(hdc, GetSysColor(COLOR_WINDOW));
-    TextOut(hdc, 5, 5,
-        sSequence.c_str(), (int)sSequence.length());
+    } else {
+        FillRect(hdc, &lpRect, (HBRUSH)(COLOR_WINDOW + 1));
+        SetBkColor(hdc, GetSysColor(COLOR_WINDOW));
+        TextOut(hdc, 5, 5,
+            sSequence.c_str(), (int)sSequence.length());
 
-    SelectObject(hdc, (HGDIOBJ)sysDefaultFont);
-    EndPaint(hWnd, &ps);
+        SelectObject(hdc, (HGDIOBJ)sysDefaultFont);
+        EndPaint(hWnd, &ps);
+    }
+    bClear = false;
+    bBack = false;
 }
 
 void RegisterCharacter(
