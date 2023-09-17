@@ -249,6 +249,8 @@ void DrawScreen(
         SelectObject(hdc, (HGDIOBJ)sysDefaultFont);
         EndPaint(hWnd, &ps);
     }
+    MSG msg;
+    while (PeekMessage(&msg, NULL, 0, 0, PM_REMOVE | PM_QS_INPUT));
     bClear = false;
     bBack = false;
 }
